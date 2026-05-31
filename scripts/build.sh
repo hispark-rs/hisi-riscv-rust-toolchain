@@ -20,10 +20,13 @@ export BOOTSTRAP_SKIP_TARGET_SANITY=1
 # affects how bootstrap perceives itself; download-ci-llvm still works.
 unset GITHUB_ACTIONS TF_BUILD CI
 # Stage-2 compiler + std/core for the listed targets, plus cargo.
+# Build EVERYTHING in a single invocation. Separate `x.py build` calls each wipe and
+# repopulate the stage2 sysroot ("Removing sysroot to avoid caching bugs"), so a later
+# tools-only call would drop the riscv32imfc std. One invocation keeps host+riscv std
+# AND the tools in the final sysroot.
 python3 x.py build --stage 2 -j "$JOBS" \
-  compiler/rustc library/std \
+  compiler/rustc library/std cargo rustfmt clippy \
   --target x86_64-unknown-linux-gnu,riscv32imfc-unknown-none-elf
-python3 x.py build --stage 2 -j "$JOBS" cargo rustfmt clippy
 
 # Bundle llvm-tools (rust-objcopy/objdump/size/nm/strip) into the sysroot's rustlib
 # bin so `rust-objcopy` etc. work with this toolchain (used by ws63-rs release packaging).
