@@ -16,6 +16,11 @@ target = ["x86_64-unknown-linux-gnu", "riscv32imfc-unknown-none-elf"]
 extended = true
 tools = ["cargo"]
 docs = false
+# Use the pure-Rust compiler-builtins intrinsics instead of compiling compiler-rt's
+# C sources. Building the C intrinsics needs a RISC-V cross C compiler (riscv*-elf-gcc);
+# we (and CI) only have a host cc, which rejects -march=rv32imfc/-mabi. Pure-Rust is
+# self-hosting via rustc and correct.
+optimized-compiler-builtins = false
 # Be gentle on a 4-core / low-RAM box; CI overrides via env if needed.
 verbose = 1
 
