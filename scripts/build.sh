@@ -17,5 +17,15 @@ export BOOTSTRAP_SKIP_TARGET_SANITY=1
 python3 x.py build --stage 2 -j "$JOBS" \
   compiler/rustc library/std \
   --target x86_64-unknown-linux-gnu,riscv32imfc-unknown-none-elf
-python3 x.py build --stage 2 -j "$JOBS" cargo
-echo "build complete; sysroot: $RUST/build/x86_64-unknown-linux-gnu/stage2"
+python3 x.py build --stage 2 -j "$JOBS" cargo rustfmt clippy
+
+# Bundle llvm-tools (rust-objcopy/objdump/size/nm/strip) into the sysroot's rustlib
+# bin so `rust-objcopy` etc. work with this toolchain (used by ws63-rs release packaging).
+SYS="$RUST/build/x86_64-unknown-linux-gnu/stage2"
+RLBIN="$SYS/lib/rustlib/x86_64-unknown-linux-gnu/bin"
+mkdir -p "$RLBIN"
+for t in objcopy objdump size nm strip; do
+  src="$RUST/build/x86_64-unknown-linux-gnu/ci-llvm/bin/llvm-$t"
+  [ -f "$src" ] && cp -f "$src" "$RLBIN/rust-$t" && echo "bundled rust-$t"
+done
+echo "build complete; sysroot: $SYS"

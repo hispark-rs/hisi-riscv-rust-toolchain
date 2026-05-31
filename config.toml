@@ -12,9 +12,11 @@ download-ci-llvm = true
 [build]
 # Host toolchain + the WS63 cross target (core/alloc are built for it).
 target = ["x86_64-unknown-linux-gnu", "riscv32imfc-unknown-none-elf"]
-# Build cargo too, so the linked toolchain is self-contained.
+# Build cargo/rustfmt/clippy too, so the linked toolchain is self-contained
+# (ws63-rs uses it for build + fmt + clippy). llvm-tools (rust-objcopy/objdump/size)
+# are copied from the CI LLVM into the sysroot by scripts/build.sh.
 extended = true
-tools = ["cargo"]
+tools = ["cargo", "rustfmt", "clippy"]
 docs = false
 # Use the pure-Rust compiler-builtins intrinsics instead of compiling compiler-rt's
 # C sources. Building the C intrinsics needs a RISC-V cross C compiler (riscv*-elf-gcc);

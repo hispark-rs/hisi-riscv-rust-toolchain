@@ -8,11 +8,14 @@ SYSROOT="$RUST/build/x86_64-unknown-linux-gnu/stage2"
 
 [ -x "$SYSROOT/bin/rustc" ] || { echo "ERROR: $SYSROOT/bin/rustc missing — build first"; exit 1; }
 
-# x.py may place cargo under stage2-tools-bin; make sure it's in the sysroot bin.
-if [ ! -x "$SYSROOT/bin/cargo" ]; then
-  CARGO="$(find "$RUST/build" -path '*stage2-tools-bin/cargo' -type f 2>/dev/null | head -1)"
-  [ -n "$CARGO" ] && cp "$CARGO" "$SYSROOT/bin/cargo" && echo "copied cargo into sysroot bin"
-fi
+# x.py places the extended tools under stage2-tools-bin; make sure each is in the
+# sysroot bin so the linked toolchain has cargo/rustfmt/clippy.
+for tool in cargo rustfmt cargo-clippy clippy-driver cargo-fmt; do
+  if [ ! -x "$SYSROOT/bin/$tool" ]; then
+    SRC="$(find "$RUST/build" -path "*stage2-tools-bin/$tool" -type f 2>/dev/null | head -1)"
+    [ -n "$SRC" ] && cp "$SRC" "$SYSROOT/bin/$tool" && echo "copied $tool into sysroot bin"
+  fi
+done
 
 rustup toolchain uninstall "$NAME" >/dev/null 2>&1 || true
 rustup toolchain link "$NAME" "$SYSROOT"
