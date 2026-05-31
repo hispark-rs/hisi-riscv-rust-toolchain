@@ -13,6 +13,12 @@ cd "$RUST"
 # pre-build target sanity check fails. Our patched in-tree compiler WILL know it once
 # built, so skipping the check is correct here.
 export BOOTSTRAP_SKIP_TARGET_SANITY=1
+
+# Under GITHUB_ACTIONS, rust bootstrap walks git history (`git rev-parse HEAD^1`,
+# path-modification checks) which fails on our shallow (--depth 1) clone. Neutralize
+# the CI detection so it uses the local-build path (proven to work shallow). This only
+# affects how bootstrap perceives itself; download-ci-llvm still works.
+unset GITHUB_ACTIONS TF_BUILD CI
 # Stage-2 compiler + std/core for the listed targets, plus cargo.
 python3 x.py build --stage 2 -j "$JOBS" \
   compiler/rustc library/std \
