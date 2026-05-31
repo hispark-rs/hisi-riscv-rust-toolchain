@@ -25,7 +25,7 @@ unset GITHUB_ACTIONS TF_BUILD CI
 # tools-only call would drop the riscv32imfc std. One invocation keeps host+riscv std
 # AND the tools in the final sysroot.
 python3 x.py build --stage 2 -j "$JOBS" \
-  compiler/rustc library/std cargo rustfmt clippy \
+  compiler/rustc library/std cargo rustfmt clippy rustdoc \
   --target x86_64-unknown-linux-gnu,riscv32imfc-unknown-none-elf
 
 # Bundle llvm-tools (rust-objcopy/objdump/size/nm/strip) into the sysroot's rustlib

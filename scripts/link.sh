@@ -10,7 +10,7 @@ SYSROOT="$RUST/build/x86_64-unknown-linux-gnu/stage2"
 
 # x.py places the extended tools under stage2-tools-bin; make sure each is in the
 # sysroot bin so the linked toolchain has cargo/rustfmt/clippy.
-for tool in cargo rustfmt cargo-clippy clippy-driver cargo-fmt; do
+for tool in cargo rustfmt cargo-clippy clippy-driver cargo-fmt rustdoc; do
   if [ ! -x "$SYSROOT/bin/$tool" ]; then
     SRC="$(find "$RUST/build" -path "*stage2-tools-bin/$tool" -type f 2>/dev/null | head -1)"
     [ -n "$SRC" ] && cp "$SRC" "$SYSROOT/bin/$tool" && echo "copied $tool into sysroot bin"
