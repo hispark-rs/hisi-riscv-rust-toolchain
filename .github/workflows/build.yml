@@ -1,0 +1,52 @@
+name: build-ws63-rust
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+# Builds a stable rustc with the WS63 target `riscv32imfc-unknown-none-elf`
+# (RV32IMFC_Zicsr, hardware single-float ilp32f, no atomics) baked in as a
+# builtin, packages the sysroot, and (on a tag) publishes it as a release asset.
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential python3 git curl
+
+      - name: Fetch rust source (pinned stable tag)
+        run: scripts/fetch-rust.sh "$GITHUB_WORKSPACE/rust"
+
+      - name: Inject WS63 builtin target
+        run: scripts/apply-target.sh "$GITHUB_WORKSPACE/rust"
+
+      - name: Build rustc + cargo + core for riscv32imfc
+        run: scripts/build.sh "$GITHUB_WORKSPACE/rust" "$(nproc)"
+
+      - name: Smoke-test the target is builtin (no build-std)
+        run: |
+          RUSTC="$GITHUB_WORKSPACE/rust/build/x86_64-unknown-linux-gnu/stage2/bin/rustc"
+          "$RUSTC" --print target-list | grep -x riscv32imfc-unknown-none-elf
+          "$RUSTC" --target riscv32imfc-unknown-none-elf --print cfg | grep -E 'target_arch|target_abi|target_feature="f"' || true
+
+      - name: Package sysroot
+        run: scripts/package.sh "$GITHUB_WORKSPACE/rust" "$GITHUB_WORKSPACE/dist"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ws63-rust-toolchain
+          path: dist/*
+
+      - name: Publish release (on tag)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

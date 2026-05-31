@@ -1,0 +1,7 @@
+# rust source checkout + build artifacts (never committed; cloned/built on demand)
+/rust/
+rust/
+build/
+dist/
+*.tar.gz
+*.tar.gz.sha256

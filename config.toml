@@ -1,0 +1,31 @@
+# Bootstrap config for building a rustc that has the WS63 target
+# `riscv32imfc-unknown-none-elf` (RV32IMFC_Zicsr, hardware single-float ilp32f,
+# NO atomic 'a' extension) baked in as a BUILTIN target — so downstream projects
+# build for it WITHOUT `-Z build-std` (the linked toolchain ships precompiled core).
+#
+# Copied to the rust checkout root by scripts/build.sh.
+
+[llvm]
+# Use the prebuilt LLVM from rust CI: no cmake/ninja/clang needed locally.
+download-ci-llvm = true
+
+[build]
+# Host toolchain + the WS63 cross target (core/alloc are built for it).
+target = ["x86_64-unknown-linux-gnu", "riscv32imfc-unknown-none-elf"]
+# Build cargo too, so the linked toolchain is self-contained.
+extended = true
+tools = ["cargo"]
+docs = false
+# Be gentle on a 4-core / low-RAM box; CI overrides via env if needed.
+verbose = 1
+
+[rust]
+# Build from the stable release tag as a stable toolchain (the WS63 target is
+# builtin, so no unstable features are required to use it downstream).
+channel = "stable"
+# Keep the build lean / avoid heavy debug to save RAM and time.
+debug = false
+debug-assertions = false
+incremental = false
+# rust-lld is referenced by the target spec (linker = "rust-lld").
+lld = true
