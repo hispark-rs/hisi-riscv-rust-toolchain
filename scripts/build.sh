@@ -24,13 +24,26 @@ unset GITHUB_ACTIONS TF_BUILD CI
 # repopulate the stage2 sysroot ("Removing sysroot to avoid caching bugs"), so a later
 # tools-only call would drop the riscv32imfc std. One invocation keeps host+riscv std
 # AND the tools in the final sysroot.
+# `rust-analyzer-proc-macro-srv` is built in this SAME invocation (it lands in
+# <sysroot>/libexec/) so rust-analyzer can expand proc-macros (ws63-rt's `#[entry]`)
+# against this rustc — a separate call would wipe the sysroot and drop the std.
 python3 x.py build --stage 2 -j "$JOBS" \
   compiler/rustc library/std cargo rustfmt clippy rustdoc \
+  src/tools/rust-analyzer/crates/proc-macro-srv-cli \
   --target x86_64-unknown-linux-gnu,riscv32imfc-unknown-none-elf
+
+SYS="$RUST/build/x86_64-unknown-linux-gnu/stage2"
+
+# Install cargo into the linked toolchain's bin/. x.py builds cargo into
+# stage2-tools-bin but only hard-links it into the stage2 sysroot bin/ on a clean
+# build — incremental runs skip that step, leaving the rustup-linked `ws63`
+# toolchain without `cargo` (so `cargo +ws63` silently falls back to the default).
+# Copy it explicitly. (rustc/rustfmt/clippy/rustdoc are placed in bin/ by x.py.)
+CARGO_SRC="$RUST/build/x86_64-unknown-linux-gnu/stage2-tools-bin/cargo"
+[ -f "$CARGO_SRC" ] && cp -f "$CARGO_SRC" "$SYS/bin/cargo" && echo "installed cargo into $SYS/bin"
 
 # Bundle llvm-tools (rust-objcopy/objdump/size/nm/strip) into the sysroot's rustlib
 # bin so `rust-objcopy` etc. work with this toolchain (used by ws63-rs release packaging).
-SYS="$RUST/build/x86_64-unknown-linux-gnu/stage2"
 RLBIN="$SYS/lib/rustlib/x86_64-unknown-linux-gnu/bin"
 mkdir -p "$RLBIN"
 for t in objcopy objdump size nm strip; do
