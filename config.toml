@@ -15,8 +15,11 @@ target = ["x86_64-unknown-linux-gnu", "riscv32imfc-unknown-none-elf"]
 # Build cargo/rustfmt/clippy too, so the linked toolchain is self-contained
 # (ws63-rs uses it for build + fmt + clippy). llvm-tools (rust-objcopy/objdump/size)
 # are copied from the CI LLVM into the sysroot by scripts/build.sh.
+# `rust-analyzer-proc-macro-srv` is built into <sysroot>/libexec/ so rust-analyzer
+# can expand proc-macros (e.g. ws63-rt's `#[entry]`) against this exact rustc —
+# without it the LSP reports "cannot find proc-macro server in sysroot".
 extended = true
-tools = ["cargo", "rustfmt", "clippy"]
+tools = ["cargo", "rustfmt", "clippy", "rust-analyzer-proc-macro-srv"]
 docs = false
 # Use the pure-Rust compiler-builtins intrinsics instead of compiling compiler-rt's
 # C sources. Building the C intrinsics needs a RISC-V cross C compiler (riscv*-elf-gcc);
