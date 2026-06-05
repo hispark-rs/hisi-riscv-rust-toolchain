@@ -42,6 +42,19 @@ SYS="$RUST/build/x86_64-unknown-linux-gnu/stage2"
 CARGO_SRC="$RUST/build/x86_64-unknown-linux-gnu/stage2-tools-bin/cargo"
 [ -f "$CARGO_SRC" ] && cp -f "$CARGO_SRC" "$SYS/bin/cargo" && echo "installed cargo into $SYS/bin"
 
+# Install the rust-gdb / rust-lldb / rust-gdbgui debug wrappers + the GDB/LLDB
+# pretty-printer scripts (x.py copies these only on `install`/`dist`, not a plain
+# `build`). rust-gdb resolves the sysroot from the adjacent rustc and auto-loads the
+# printers from <sysroot>/lib/rustlib/etc/. gdb/lldb themselves are a system dep —
+# for the RISC-V target use `RUST_GDB=gdb-multiarch rust-gdb`.
+install -m 0755 "$RUST/src/etc/rust-gdb" "$RUST/src/etc/rust-gdbgui" "$RUST/src/etc/rust-lldb" "$SYS/bin/" \
+  && echo "installed rust-gdb/rust-lldb/rust-gdbgui"
+mkdir -p "$SYS/lib/rustlib/etc"
+for f in gdb_load_rust_pretty_printers.py gdb_lookup.py gdb_providers.py \
+         lldb_commands lldb_lookup.py lldb_providers.py rust_types.py; do
+  [ -f "$RUST/src/etc/$f" ] && cp -f "$RUST/src/etc/$f" "$SYS/lib/rustlib/etc/"
+done
+
 # Bundle llvm-tools (rust-objcopy/objdump/size/nm/strip) into the sysroot's rustlib
 # bin so `rust-objcopy` etc. work with this toolchain (used by ws63-rs release packaging).
 RLBIN="$SYS/lib/rustlib/x86_64-unknown-linux-gnu/bin"
