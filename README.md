@@ -8,7 +8,7 @@
 
 ## 为什么要这个
 
-[ws63-rs](https://github.com/sanchuanhehe/ws63-rs) 默认用 builtin 的 `riscv32imc`（无原子，**软浮点**）。
+[ws63-rs](https://github.com/hispark-rs/ws63-rs) 默认用 builtin 的 `riscv32imc`（无原子，**软浮点**）。
 当需要**硬浮点**（典型场景：链接厂商用 `-mabi=ilp32f` 编的闭源 Wi-Fi/BT blob，软浮点 ABI 不兼容）时，
 没有现成的 builtin"无原子 + 硬浮点"目标，常规做法是 `nightly + -Z build-std` 现编 `core`——但它脆弱
 （自定义 JSON spec 随 nightly 漂移）且 `build-std` 全局化会破坏 host 测试。
