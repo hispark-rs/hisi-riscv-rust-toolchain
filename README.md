@@ -61,7 +61,6 @@ fetch → 注入 → 构建 → 冒烟测试（确认目标是 builtin）→ 打
 |--------|-------------|------|
 | ubuntu-latest | x86_64-unknown-linux-gnu | `hisi-riscv-rust-<ver>-x86_64-unknown-linux-gnu.tar.gz` |
 | ubuntu-24.04-arm | aarch64-unknown-linux-gnu | `…-aarch64-unknown-linux-gnu.tar.gz` |
-| macos-13 | x86_64-apple-darwin | `…-x86_64-apple-darwin.tar.gz` |
 | macos-14 | aarch64-apple-darwin | `…-aarch64-apple-darwin.tar.gz` |
 | windows-latest | x86_64-pc-windows-msvc | `…-x86_64-pc-windows-msvc.tar.gz`(best-effort) |
 

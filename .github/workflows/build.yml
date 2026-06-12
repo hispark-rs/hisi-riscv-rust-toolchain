@@ -36,8 +36,10 @@ jobs:
             host: x86_64-unknown-linux-gnu
           - os: ubuntu-24.04-arm
             host: aarch64-unknown-linux-gnu
-          - os: macos-13          # Intel runner
-            host: x86_64-apple-darwin
+          # No Intel-macOS leg: GitHub retired the free `macos-13` Intel runner
+          # (2025-12), so an x86_64-apple-darwin job never gets scheduled and would
+          # block the release. Apple-Silicon (macos-14) covers macOS; Intel-mac
+          # users can build from source via scripts/build-all.sh.
           - os: macos-14          # Apple-Silicon runner
             host: aarch64-apple-darwin
           - os: windows-latest    # best-effort (bash scripts via git-bash + MSVC)
