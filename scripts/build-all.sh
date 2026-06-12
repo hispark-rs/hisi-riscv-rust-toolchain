@@ -9,7 +9,7 @@ JOBS="${2:-$(nproc)}"
 "$HERE/scripts/fetch-rust.sh" "$RUST"
 "$HERE/scripts/apply-target.sh" "$RUST"
 "$HERE/scripts/build.sh" "$RUST" "$JOBS"
-"$HERE/scripts/link.sh" "$RUST" ws63
+"$HERE/scripts/link.sh" "$RUST" hisi-riscv
 echo
 echo "Done. Validate with:"
-echo "  cargo +ws63 build --target riscv32imfc-unknown-none-elf  # in a no_std crate"
+echo "  cargo +hisi-riscv build --target riscv32imfc-unknown-none-elf  # in a no_std crate"

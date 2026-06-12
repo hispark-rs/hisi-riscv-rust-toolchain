@@ -27,10 +27,10 @@ sha256() {
 }
 
 mkdir -p "$OUT"
-# Keep the `ws63-rust` artifact prefix: the rustup channel/identity stays `ws63`
-# (downstream `rustup toolchain link ws63` + every rust-toolchain.toml), even though
-# the repo is now chip-neutral (hisi-riscv-rust-toolchain).
-TAR="$OUT/ws63-rust-${VER}-${HOST}.tar.gz"
+# Chip-neutral artifact prefix `hisi-riscv-rust` (matches the repo + the rustup
+# channel `hisi-riscv` that downstream `rust-toolchain.toml` link against). One
+# tarball per host triple.
+TAR="$OUT/hisi-riscv-rust-${VER}-${HOST}.tar.gz"
 tar -C "$(dirname "$SYSROOT")" -czf "$TAR" "$(basename "$SYSROOT")"
 ( cd "$OUT" && sha256 "$(basename "$TAR")" )
 echo "packaged: $TAR"

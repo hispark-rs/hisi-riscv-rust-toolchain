@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Register the freshly built sysroot as a rustup custom toolchain named "ws63".
+# Register the freshly built sysroot as a rustup custom toolchain named "hisi-riscv".
 # Ensures cargo is present in the sysroot bin. Usage: scripts/link.sh <rust-checkout> [name]
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
 RUST="${1:?usage: link.sh <rust-checkout> [toolchain-name]}"
-NAME="${2:-ws63}"
+NAME="${2:-hisi-riscv}"
 . "$HERE/scripts/host-triple.sh"
 HOST="$(detect_host_triple)"
 SYSROOT="$RUST/build/$HOST/stage2"

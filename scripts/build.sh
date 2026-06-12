@@ -61,7 +61,7 @@ for f in gdb_load_rust_pretty_printers.py gdb_lookup.py gdb_providers.py \
 done
 
 # Bundle llvm-tools (rust-objcopy/objdump/size/nm/strip) into the sysroot's rustlib
-# bin so `rust-objcopy` etc. work with this toolchain (used by ws63-rs release packaging).
+# bin so `rust-objcopy` etc. work with this toolchain (used by hisi-riscv-rs release packaging).
 RLBIN="$SYS/lib/rustlib/$HOST/bin"
 mkdir -p "$RLBIN"
 for t in objcopy objdump size nm strip; do

@@ -16,8 +16,8 @@ on:
 # publishes them all as assets of one GitHub Release.
 #
 # The toolchain is chip-neutral (ws63 + bs2x both build for riscv32imfc). The rustup
-# channel / artifact identity stays `ws63` (downstream `rustup toolchain link ws63`
-# + every rust-toolchain.toml), so the tarballs keep the `ws63-rust-*` prefix.
+# channel / artifact identity is `hisi-riscv` (downstream `rustup toolchain link hisi-riscv`
+# + every rust-toolchain.toml), so the tarballs keep the `hisi-riscv-rust-*` prefix.
 
 permissions:
   contents: write
@@ -120,10 +120,10 @@ jobs:
             Multi-platform: linux x86_64/aarch64, macOS x86_64/aarch64, windows x86_64
             (a tarball per host; the Windows build is best-effort).
 
-            Install (pick the tarball for your host; the rustup channel is `ws63`):
+            Install (pick the tarball for your host; the rustup channel is `hisi-riscv`):
             ```
-            tar xzf ws63-rust-*-<your-host>.tar.gz
-            rustup toolchain link ws63 "$PWD/stage2"
+            tar xzf hisi-riscv-rust-*-<your-host>.tar.gz
+            rustup toolchain link hisi-riscv "$PWD/stage2"
             ```
 
             Each sysroot ships: rustc + cargo + rustfmt + clippy + rustdoc,

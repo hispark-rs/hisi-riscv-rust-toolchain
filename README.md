@@ -4,9 +4,9 @@
 (**WS63** + **BS2X**/BS20·BS21·BS22)应用核的目标 **`riscv32imfc-unknown-none-elf`** 烤进
 **builtin target** 列表,并用 `rustup toolchain link` 挂成自定义工具链。
 
-> 仓库芯片中立(ws63/bs2x 都编 riscv32imfc)。rustup 通道名 / 产物前缀仍是 **`ws63`**
-> (下游 `rustup toolchain link ws63` + 各 `rust-toolchain.toml` 都引用它),只是仓名改成了
-> 家族风格 `hisi-riscv-*`。
+> 芯片中立(ws63/bs2x 都编 riscv32imfc)。rustup 通道名 = **`hisi-riscv`**、产物前缀 =
+> **`hisi-riscv-rust`**(下游 `rustup toolchain link hisi-riscv` + 各 `rust-toolchain.toml`
+> 的 `channel = "hisi-riscv"` 都引用它)。旧的 `ws63` 通道 / `ws63-rust-*` 产物已弃用。
 
 > 目标 ISA：**RV32IMFC_Zicsr，硬件单精度浮点（`ilp32f`），无原子扩展（A）**。
 
@@ -37,12 +37,12 @@ Linux 另需 `build-essential`/`libssl-dev`/`pkg-config`。host triple 由 `scri
 自动探测(或用 `HOST=` 覆盖,CI matrix 即如此按平台传)。
 
 ```bash
-# 一把梭：拉源码 → 注入目标 → 构建(本机 host) → rustup link 成 "ws63"
+# 一把梭：拉源码 → 注入目标 → 构建(本机 host) → rustup link 成 "hisi-riscv"
 ./scripts/build-all.sh "$PWD/rust" "$(nproc)"
 
 # 验证（在一个 no_std crate 里，无需 -Z build-std）
-cargo +ws63 build --target riscv32imfc-unknown-none-elf
-rustc +ws63 --print target-list | grep riscv32imfc   # 确认是 builtin
+cargo +hisi-riscv build --target riscv32imfc-unknown-none-elf
+rustc +hisi-riscv --print target-list | grep riscv32imfc   # 确认是 builtin
 ```
 
 分步脚本：`fetch-rust.sh`（克隆 pinned tag，见 `rust-version.txt`）、`apply-target.sh`（注入目标）、
@@ -59,28 +59,28 @@ fetch → 注入 → 构建 → 冒烟测试（确认目标是 builtin）→ 打
 
 | Runner | host triple | 产物 |
 |--------|-------------|------|
-| ubuntu-latest | x86_64-unknown-linux-gnu | `ws63-rust-<ver>-x86_64-unknown-linux-gnu.tar.gz` |
+| ubuntu-latest | x86_64-unknown-linux-gnu | `hisi-riscv-rust-<ver>-x86_64-unknown-linux-gnu.tar.gz` |
 | ubuntu-24.04-arm | aarch64-unknown-linux-gnu | `…-aarch64-unknown-linux-gnu.tar.gz` |
 | macos-13 | x86_64-apple-darwin | `…-x86_64-apple-darwin.tar.gz` |
 | macos-14 | aarch64-apple-darwin | `…-aarch64-apple-darwin.tar.gz` |
 | windows-latest | x86_64-pc-windows-msvc | `…-x86_64-pc-windows-msvc.tar.gz`(best-effort) |
 
 > Windows 用 git-bash 跑同一套 bash 脚本 + MSVC 构建,标 `experimental`(失败不阻塞 release)。
-> 产物前缀保持 `ws63-rust`(与 rustup 通道 `ws63` 一致),不随仓名改。
+> 产物前缀 `hisi-riscv-rust`、rustup 通道 `hisi-riscv`(均已芯片中立,弃用旧的 `ws63`)。
 
-下游使用预编译产物（按 host 选 tarball；通道名仍是 `ws63`）：
+下游使用预编译产物（按 host 选 tarball；通道名 `hisi-riscv`）：
 
 ```bash
-curl -LO <release-asset-url>/ws63-rust-1.96.0-<your-host>.tar.gz
-tar xzf ws63-rust-1.96.0-*.tar.gz
-rustup toolchain link ws63 "$PWD/stage2"
+curl -LO <release-asset-url>/hisi-riscv-rust-1.96.0-<your-host>.tar.gz
+tar xzf hisi-riscv-rust-1.96.0-*.tar.gz
+rustup toolchain link hisi-riscv "$PWD/stage2"
 ```
 
-## 在 ws63-rs 中启用（ROADMAP 阶段 3）
+## 在 hisi-riscv-rs 中启用（ROADMAP 阶段 3）
 
-切到硬浮点时，在 ws63-rs：`rust-toolchain.toml` 用 `ws63` 工具链、`.cargo/config.toml`
+切到硬浮点时，在 hisi-riscv-rs：`rust-toolchain.toml` 用 `hisi-riscv` 工具链、`.cargo/config.toml`
 `target = "riscv32imfc-unknown-none-elf"`（builtin，无需 build-std）、`portable-atomic`
-保持 `critical-section` feature。详见 ws63-rs 的 `ROADMAP.md` 阶段 3 与
+保持 `critical-section` feature。详见 hisi-riscv-rs 的 `ROADMAP.md` 阶段 3 与
 `docs/architecture/overview.md`。
 
 ## 版本
