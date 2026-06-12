@@ -2,9 +2,12 @@
 # Register the freshly built sysroot as a rustup custom toolchain named "ws63".
 # Ensures cargo is present in the sysroot bin. Usage: scripts/link.sh <rust-checkout> [name]
 set -euo pipefail
+HERE="$(cd "$(dirname "$0")/.." && pwd)"
 RUST="${1:?usage: link.sh <rust-checkout> [toolchain-name]}"
 NAME="${2:-ws63}"
-SYSROOT="$RUST/build/x86_64-unknown-linux-gnu/stage2"
+. "$HERE/scripts/host-triple.sh"
+HOST="$(detect_host_triple)"
+SYSROOT="$RUST/build/$HOST/stage2"
 
 [ -x "$SYSROOT/bin/rustc" ] || { echo "ERROR: $SYSROOT/bin/rustc missing — build first"; exit 1; }
 

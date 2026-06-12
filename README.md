@@ -1,14 +1,18 @@
-# ws63-rust-toolchain
+# hisi-riscv-rust-toolchain
 
-构建脚本 + CI：从 **stable** 的 rust-lang/rust 源码编译一个 rustc，把 HiSilicon **WS63**
-应用核的目标 **`riscv32imfc-unknown-none-elf`** 烤进 **builtin target** 列表，并用
-`rustup toolchain link` 挂成自定义工具链。
+构建脚本 + CI：从 **stable** 的 rust-lang/rust 源码编译一个 rustc，把 HiSilicon RISC-V 家族
+(**WS63** + **BS2X**/BS20·BS21·BS22)应用核的目标 **`riscv32imfc-unknown-none-elf`** 烤进
+**builtin target** 列表,并用 `rustup toolchain link` 挂成自定义工具链。
+
+> 仓库芯片中立(ws63/bs2x 都编 riscv32imfc)。rustup 通道名 / 产物前缀仍是 **`ws63`**
+> (下游 `rustup toolchain link ws63` + 各 `rust-toolchain.toml` 都引用它),只是仓名改成了
+> 家族风格 `hisi-riscv-*`。
 
 > 目标 ISA：**RV32IMFC_Zicsr，硬件单精度浮点（`ilp32f`），无原子扩展（A）**。
 
 ## 为什么要这个
 
-[ws63-rs](https://github.com/hispark-rs/ws63-rs) 默认用 builtin 的 `riscv32imc`（无原子，**软浮点**）。
+[hisi-riscv-rs](https://github.com/hispark-rs/hisi-riscv-rs) 默认用 builtin 的 `riscv32imc`（无原子，**软浮点**）。
 当需要**硬浮点**（典型场景：链接厂商用 `-mabi=ilp32f` 编的闭源 Wi-Fi/BT blob，软浮点 ABI 不兼容）时，
 没有现成的 builtin"无原子 + 硬浮点"目标，常规做法是 `nightly + -Z build-std` 现编 `core`——但它脆弱
 （自定义 JSON spec 随 nightly 漂移）且 `build-std` 全局化会破坏 host 测试。
@@ -28,10 +32,12 @@
 
 ## 本地构建
 
-需要：x86_64 Linux、`build-essential`、`python3`、`git`、约 20-30G 磁盘、≥8G RAM（建议加 swap）。
+需要：Linux/macOS/Windows(git-bash) 任一、`python3`、`git`、约 20-30G 磁盘、≥8G RAM（建议加 swap）；
+Linux 另需 `build-essential`/`libssl-dev`/`pkg-config`。host triple 由 `scripts/host-triple.sh`
+自动探测(或用 `HOST=` 覆盖,CI matrix 即如此按平台传)。
 
 ```bash
-# 一把梭：拉源码 → 注入目标 → 构建 → rustup link 成 "ws63"
+# 一把梭：拉源码 → 注入目标 → 构建(本机 host) → rustup link 成 "ws63"
 ./scripts/build-all.sh "$PWD/rust" "$(nproc)"
 
 # 验证（在一个 no_std crate 里，无需 -Z build-std）
@@ -45,16 +51,27 @@ rustc +ws63 --print target-list | grep riscv32imfc   # 确认是 builtin
 bootstrap 配置见 `config.toml`：`download-ci-llvm = true`（用预编译 LLVM，免 cmake/ninja）、
 `target = [host, riscv32imfc]`、`extended + cargo`、`channel = stable`。
 
-## CI / 发布
+## CI / 发布（多平台）
 
-`.github/workflows/build.yml`：`workflow_dispatch` 或推 `v*` tag 触发，在 ubuntu-latest 上
-fetch → 注入 → 构建 → 冒烟测试（确认目标是 builtin）→ 打包 sysroot，并在 tag 时把
-`ws63-rust-<ver>-x86_64-unknown-linux-gnu.tar.gz` 作为 Release 资产发布。
+`.github/workflows/build.yml`：`workflow_dispatch` 或推 `v*` tag 触发,**矩阵**在每个 host 上
+fetch → 注入 → 构建 → 冒烟测试（确认目标是 builtin）→ 打包 sysroot；`release` job 汇总所有
+平台产物,在 tag 时(或 dispatch 带 `tag` 输入)一并发为一个 GitHub Release。
 
-下游使用预编译产物：
+| Runner | host triple | 产物 |
+|--------|-------------|------|
+| ubuntu-latest | x86_64-unknown-linux-gnu | `ws63-rust-<ver>-x86_64-unknown-linux-gnu.tar.gz` |
+| ubuntu-24.04-arm | aarch64-unknown-linux-gnu | `…-aarch64-unknown-linux-gnu.tar.gz` |
+| macos-13 | x86_64-apple-darwin | `…-x86_64-apple-darwin.tar.gz` |
+| macos-14 | aarch64-apple-darwin | `…-aarch64-apple-darwin.tar.gz` |
+| windows-latest | x86_64-pc-windows-msvc | `…-x86_64-pc-windows-msvc.tar.gz`(best-effort) |
+
+> Windows 用 git-bash 跑同一套 bash 脚本 + MSVC 构建,标 `experimental`(失败不阻塞 release)。
+> 产物前缀保持 `ws63-rust`(与 rustup 通道 `ws63` 一致),不随仓名改。
+
+下游使用预编译产物（按 host 选 tarball；通道名仍是 `ws63`）：
 
 ```bash
-curl -LO <release-asset-url>/ws63-rust-1.96.0-x86_64-unknown-linux-gnu.tar.gz
+curl -LO <release-asset-url>/ws63-rust-1.96.0-<your-host>.tar.gz
 tar xzf ws63-rust-1.96.0-*.tar.gz
 rustup toolchain link ws63 "$PWD/stage2"
 ```
