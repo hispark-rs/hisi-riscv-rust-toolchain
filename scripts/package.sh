@@ -31,7 +31,11 @@ mkdir -p "$OUT"
 # channel `hisi-riscv` that downstream `rust-toolchain.toml` link against). One
 # tarball per host triple.
 TAR="$OUT/hisi-riscv-rust-${VER}-${HOST}.tar.gz"
-tar -C "$(dirname "$SYSROOT")" -czf "$TAR" "$(basename "$SYSROOT")"
+# On Windows/git-bash, GNU tar reads the `D:/...` drive-letter path as a remote
+# host ("Cannot connect to D:") — --force-local makes it treat `:` as a local
+# filename. (Not a valid flag on macOS bsdtar, so gate it to Windows.)
+TARFLAGS=""; case "$HOST" in *windows*) TARFLAGS="--force-local";; esac
+tar $TARFLAGS -C "$(dirname "$SYSROOT")" -czf "$TAR" "$(basename "$SYSROOT")"
 ( cd "$OUT" && sha256 "$(basename "$TAR")" )
 echo "packaged: $TAR"
 ls -la "$OUT"
