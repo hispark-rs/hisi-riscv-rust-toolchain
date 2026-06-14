@@ -26,12 +26,14 @@ jobs:
   build:
     name: build (${{ matrix.host }})
     runs-on: ${{ matrix.os }}
-    # Build the Linux binaries inside an old-glibc manylinux container (glibc 2.28),
+    # Build the Linux binaries inside an old-glibc manylinux container (glibc 2.34),
     # the way Rust's official dist links against an old glibc: glibc is backward- not
     # forward-compatible, so binaries built against the runner's bleeding-edge glibc
     # (ubuntu-latest = 24.04 = 2.39) fail on older distros with "GLIBC_2.39 not found".
-    # manylinux_2_28 (2.28) covers ~every 2019+ distro and is node20-compatible (unlike
-    # manylinux2014/2.17, which can't run actions/checkout@v4). Empty for macOS/Windows.
+    # manylinux_2_34 (AlmaLinux 9, glibc 2.34) covers ~every 2019+ distro (Ubuntu 22.04 =
+    # 2.35, Debian 12, RHEL 9 …) and is node20-compatible. We use the _2_34 image (not the
+    # older _2_28 / AlmaLinux 8) because EL8 ships OpenSSL 1.1.1, but cargo's curl-sys needs
+    # OpenSSL >= 3.0; AlmaLinux 9's openssl-devel is 3.0. Empty for macOS/Windows.
     container: ${{ matrix.container }}
     timeout-minutes: 360
     continue-on-error: ${{ matrix.experimental || false }}
@@ -41,10 +43,10 @@ jobs:
         include:
           - os: ubuntu-latest
             host: x86_64-unknown-linux-gnu
-            container: quay.io/pypa/manylinux_2_28_x86_64
+            container: quay.io/pypa/manylinux_2_34_x86_64
           - os: ubuntu-24.04-arm
             host: aarch64-unknown-linux-gnu
-            container: quay.io/pypa/manylinux_2_28_aarch64
+            container: quay.io/pypa/manylinux_2_34_aarch64
           # No Intel-macOS leg: GitHub retired the free `macos-13` Intel runner
           # (2025-12), so an x86_64-apple-darwin job never gets scheduled and would
           # block the release. Apple-Silicon (macos-14) covers macOS; Intel-mac
@@ -62,11 +64,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install build dependencies (Linux container = manylinux_2_28 / AlmaLinux 8)
+      - name: Install build dependencies (Linux container = manylinux_2_34 / AlmaLinux 9)
         if: runner.os == 'Linux' && matrix.container != ''
         run: |
-          # AlmaLinux 8 (dnf). download-ci-llvm=true means no local LLVM build, so we
-          # only need a C toolchain + python3 for x.py, plus openssl for openssl-sys.
+          # AlmaLinux 9 (dnf). download-ci-llvm=true means no local LLVM build, so we
+          # only need a C toolchain + python3 for x.py, plus openssl for openssl-sys /
+          # curl-sys. AlmaLinux 9's openssl-devel is OpenSSL 3.0 (EL8's was 1.1.1, which
+          # curl-sys rejects). python3.11 is available; symlink it as python3 for x.py.
           dnf install -y gcc gcc-c++ make git curl openssl-devel perl perl-IPC-Cmd \
             pkgconf-pkg-config python3.11
           ln -sf "$(command -v python3.11)" /usr/local/bin/python3
