@@ -5,3 +5,6 @@ build/
 dist/
 *.tar.gz
 *.tar.gz.sha256
+
+# macOS
+.DS_Store
