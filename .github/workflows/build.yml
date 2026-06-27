@@ -122,16 +122,18 @@ jobs:
             Multi-platform: linux x86_64/aarch64, macOS x86_64/aarch64, windows x86_64
             (a tarball per host; the Windows build is best-effort).
 
-            Install (pick the tarball for your host; the rustup channel is `hisi-riscv`):
+            Install (pick the tarball for your host; the rustup channel is `hisi-riscv`).
+            Extract straight into rustup's toolchains dir — rustup auto-discovers it,
+            no `rustup toolchain link` needed and the toolchain is self-contained:
             ```
-            tar xzf hisi-riscv-rust-*-<your-host>.tar.gz
-            rustup toolchain link hisi-riscv "$PWD/stage2"
+            mkdir -p ~/.rustup/toolchains/hisi-riscv
+            tar xzf hisi-riscv-rust-*-<your-host>.tar.gz --strip-components=1 -C ~/.rustup/toolchains/hisi-riscv
             ```
 
             Each sysroot ships: rustc + cargo + rustfmt + clippy + rustdoc,
-            `rust-analyzer-proc-macro-srv`, rust-src, llvm-tools (`rust-objcopy` …),
-            and precompiled core/alloc for the target. Unix builds also include
-            `rust-gdb` / `rust-lldb` + pretty-printers.
+            `rust-analyzer-proc-macro-srv`, a self-contained rust-src (materialized,
+            not a symlink), llvm-tools (`rust-objcopy` …), and precompiled core/alloc
+            for the target. Unix builds also include `rust-gdb` / `rust-lldb` + pretty-printers.
           files: dist/*
           fail_on_unmatched_files: true
         env:
