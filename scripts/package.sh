@@ -26,6 +26,23 @@ sha256() {
   else shasum -a 256 "$1" > "$1.sha256"; fi
 }
 
+# Materialize rust-src before packaging. x.py leaves the stage2 sysroot's
+# `lib/rustlib/src/rust` as a SYMLINK to the build machine's rust checkout ($RUST,
+# an absolute path like /home/runner/work/.../rust). tar stores that symlink
+# verbatim, so it DANGLES on every downstream machine — rust-analyzer can then not
+# load the core/std sources and floods the editor with false-positive diagnostics
+# (unresolved `println!`, no `len` on `[u8; N]`, etc). Replace the symlink with the
+# real, version-matched `library/` workspace + lockfile so the tarball is
+# self-contained (mirrors what `rustup component add rust-src` ships).
+SRC_DIR="$SYSROOT/lib/rustlib/src/rust"
+if [ -L "$SRC_DIR" ] || [ ! -e "$SRC_DIR/library/std/src/lib.rs" ]; then
+  echo "Materializing self-contained rust-src into $SRC_DIR"
+  rm -rf "$SRC_DIR"
+  mkdir -p "$SRC_DIR"
+  cp -a "$RUST/library" "$SRC_DIR/library"
+  [ -f "$RUST/Cargo.lock" ] && cp -a "$RUST/Cargo.lock" "$SRC_DIR/Cargo.lock"
+fi
+
 mkdir -p "$OUT"
 # Chip-neutral artifact prefix `hisi-riscv-rust` (matches the repo + the rustup
 # channel `hisi-riscv` that downstream `rust-toolchain.toml` link against). One
