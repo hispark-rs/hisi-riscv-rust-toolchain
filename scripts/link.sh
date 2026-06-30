@@ -12,8 +12,10 @@ SYSROOT="$RUST/build/$HOST/stage2"
 [ -x "$SYSROOT/bin/rustc" ] || { echo "ERROR: $SYSROOT/bin/rustc missing — build first"; exit 1; }
 
 # x.py places the extended tools under stage2-tools-bin; make sure each is in the
-# sysroot bin so the linked toolchain has cargo/rustfmt/clippy.
-for tool in cargo rustfmt cargo-clippy clippy-driver cargo-fmt rustdoc; do
+# sysroot bin so the linked toolchain has cargo/rustfmt/clippy. rust-analyzer is
+# included so the rustup proxy finds it for projects pinning this toolchain
+# (custom toolchains can't `rustup component add rust-analyzer`).
+for tool in cargo rustfmt cargo-clippy clippy-driver cargo-fmt rustdoc rust-analyzer; do
   if [ ! -x "$SYSROOT/bin/$tool" ]; then
     SRC="$(find "$RUST/build" -path "*stage2-tools-bin/$tool" -type f 2>/dev/null | head -1)"
     [ -n "$SRC" ] && cp "$SRC" "$SYSROOT/bin/$tool" && echo "copied $tool into sysroot bin"

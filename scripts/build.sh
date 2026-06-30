@@ -27,9 +27,12 @@ unset GITHUB_ACTIONS TF_BUILD CI
 # (separate `x.py build` calls each wipe + repopulate the stage2 sysroot, dropping the
 # riscv32imfc std). `rust-analyzer-proc-macro-srv` is built here too (lands in
 # <sysroot>/libexec/) so rust-analyzer can expand proc-macros against this rustc.
+# `src/tools/rust-analyzer` builds the full rust-analyzer binary into
+# <sysroot>/bin/ so the rustup proxy resolves it for projects pinning this
+# toolchain (custom toolchains can't `rustup component add rust-analyzer`).
 python3 x.py build --stage 2 -j "$JOBS" \
   compiler/rustc library/std cargo rustfmt clippy rustdoc \
-  src/tools/rust-analyzer/crates/proc-macro-srv-cli \
+  src/tools/rust-analyzer src/tools/rust-analyzer/crates/proc-macro-srv-cli \
   --target "$HOST,riscv32imfc-unknown-none-elf"
 
 SYS="$RUST/build/$HOST/stage2"

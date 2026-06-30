@@ -18,8 +18,14 @@ target = ["x86_64-unknown-linux-gnu", "riscv32imfc-unknown-none-elf"]
 # `rust-analyzer-proc-macro-srv` is built into <sysroot>/libexec/ so rust-analyzer
 # can expand proc-macros (e.g. hisi-riscv-rt's `#[entry]`) against this exact rustc —
 # without it the LSP reports "cannot find proc-macro server in sysroot".
+# `rust-analyzer` itself is built too so the linked toolchain ships a real
+# bin/rust-analyzer; otherwise the rustup proxy in `~/.cargo/bin/rust-analyzer`
+# errors with "rust-analyzer is not installed for the custom toolchain" in any
+# project that pins `channel = "hisi-riscv"` (custom toolchains can't `rustup
+# component add`). Building it from this exact rustc keeps RA's ABI matched to
+# the proc-macro-srv and the builtin target.
 extended = true
-tools = ["cargo", "rustfmt", "clippy", "rust-analyzer-proc-macro-srv"]
+tools = ["cargo", "rustfmt", "clippy", "rust-analyzer", "rust-analyzer-proc-macro-srv"]
 docs = false
 # Use the pure-Rust compiler-builtins intrinsics instead of compiling compiler-rt's
 # C sources. Building the C intrinsics needs a RISC-V cross C compiler (riscv*-elf-gcc);
