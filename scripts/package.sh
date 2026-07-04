@@ -14,11 +14,15 @@ EXE=""; case "$HOST" in *windows*) EXE=".exe";; esac
 SYSROOT="$RUST/build/$HOST/stage2"
 
 [ -x "$SYSROOT/bin/rustc$EXE" ] || { echo "ERROR: $SYSROOT/bin/rustc$EXE missing — build first"; exit 1; }
-# ensure cargo present
-if [ ! -x "$SYSROOT/bin/cargo$EXE" ]; then
-  CARGO="$(find "$RUST/build" -path "*stage2-tools-bin/cargo$EXE" -type f 2>/dev/null | head -1)"
-  [ -n "$CARGO" ] && cp "$CARGO" "$SYSROOT/bin/cargo$EXE"
-fi
+# Ensure extended tools are present in the packaged sysroot. CI packages the
+# stage2 sysroot directly and does not run scripts/link.sh, so anything x.py left
+# in stage2-tools-bin must be copied here before tarball creation.
+for tool in cargo rust-analyzer; do
+  if [ ! -x "$SYSROOT/bin/$tool$EXE" ]; then
+    SRC="$(find "$RUST/build" -path "*stage2-tools-bin/$tool$EXE" -type f 2>/dev/null | head -1)"
+    [ -n "$SRC" ] && cp "$SRC" "$SYSROOT/bin/$tool$EXE" && echo "copied $tool$EXE into sysroot bin"
+  fi
+done
 
 # Portable sha256 (sha256sum on Linux/Git-bash, shasum -a 256 on macOS).
 sha256() {
