@@ -1,88 +1,67 @@
 # hisi-riscv-rust-toolchain
 
-构建脚本 + CI：从 **stable** 的 rust-lang/rust 源码编译一个 rustc，把 HiSilicon RISC-V 家族
-(**WS63** + **BS2X**/BS20·BS21·BS22)应用核的目标 **`riscv32imfc-unknown-none-elf`** 烤进
-**builtin target** 列表,并用 `rustup toolchain link` 挂成自定义工具链。
+Official Rust nightly radar for the HiSilicon RISC-V application target
+`riscv32imfc-unknown-none-elf` (RV32IMFC_Zicsr, hard-float `ilp32f`, no A
+extension).
 
-> 芯片中立(ws63/bs2x 都编 riscv32imfc)。rustup 通道名 = **`hisi-riscv`**、产物前缀 =
-> **`hisi-riscv-rust`**(下游 `rustup toolchain link hisi-riscv` + 各 `rust-toolchain.toml`
-> 的 `channel = "hisi-riscv"` 都引用它)。旧的 `ws63` 通道 / `ws63-rust-*` 产物已弃用。
+This repository no longer defines the default downstream toolchain. The
+`hisi-riscv-rs` ecosystem now builds with an official upstream Rust nightly where
+`rustc --print target-list` includes `riscv32imfc-unknown-none-elf`. Because
+rustup does not yet ship a prebuilt `rust-std` component for that target,
+downstream firmware builds use `rust-src` plus `-Zbuild-std=core,alloc`.
 
-> 目标 ISA：**RV32IMFC_Zicsr，硬件单精度浮点（`ilp32f`），无原子扩展（A）**。
+## Current role
 
-## 为什么要这个
+This repo is the external CI / radar that watches the upstream path:
 
-[hisi-riscv-rs](https://github.com/hispark-rs/hisi-riscv-rs) 默认用 builtin 的 `riscv32imc`（无原子，**软浮点**）。
-当需要**硬浮点**（典型场景：链接厂商用 `-mabi=ilp32f` 编的闭源 Wi-Fi/BT blob，软浮点 ABI 不兼容）时，
-没有现成的 builtin"无原子 + 硬浮点"目标，常规做法是 `nightly + -Z build-std` 现编 `core`——但它脆弱
-（自定义 JSON spec 随 nightly 漂移）且 `build-std` 全局化会破坏 host 测试。
+- latest nightly still contains `riscv32imfc-unknown-none-elf`;
+- rustup target components start shipping, or remain absent as expected;
+- `hisi-riscv-rs` can build representative firmware with
+  `-Zbuild-std=core,alloc`;
+- optional QEMU/HIL canaries keep target regressions visible;
+- reports accumulate evidence for future Tier-2 readiness work.
 
-本仓库走另一条路：**把目标编进 rustc 自身**，得到一个 stable 工具链，下游
-**无需 `-Z build-std`** 即可 `--target riscv32imfc-unknown-none-elf`（工具链已带预编译的 `core`）。
+Older custom rustc tarball releases are retained as historical artifacts only.
+They are not the happy path for new projects, CI, or documentation.
 
-## 目标定义
-
-`targets/riscv32imfc-unknown-none-elf.rs`：等价于 in-tree 的 `riscv32imafc-unknown-none-elf`
-**去掉 `a` 扩展**，并沿用 `riscv32imc` 处理无原子核的方式：
-
-- `features = "+m,+f,+c,+forced-atomics"`、`llvm_abiname = ilp32f`
-- `atomic_cas = false`：原子 load/store 降为普通 ld/st（单 hart 安全），RMW/CAS 关闭 →
-  下游用 critical-section polyfill（如 `portable-atomic` 的 `critical-section` feature）。
-- 不发 `lr.w/sc.w/amo*`，在无 A 扩展的核上不会触发非法指令陷阱。
-
-## 本地构建
-
-需要：Linux/macOS/Windows(git-bash) 任一、`python3`、`git`、约 20-30G 磁盘、≥8G RAM（建议加 swap）；
-Linux 另需 `build-essential`/`libssl-dev`/`pkg-config`。host triple 由 `scripts/host-triple.sh`
-自动探测(或用 `HOST=` 覆盖,CI matrix 即如此按平台传)。
+## Local smoke
 
 ```bash
-# 一把梭：拉源码 → 注入目标 → 构建(本机 host) → rustup link 成 "hisi-riscv"
-./scripts/build-all.sh "$PWD/rust" "$(nproc)"
+rustup update nightly
+rustc +nightly --print target-list | grep -x riscv32imfc-unknown-none-elf
 
-# 验证（在一个 no_std crate 里，无需 -Z build-std）
-cargo +hisi-riscv build --target riscv32imfc-unknown-none-elf
-rustc +hisi-riscv --print target-list | grep riscv32imfc   # 确认是 builtin
+rustup target list --toolchain nightly | grep -x riscv32imfc-unknown-none-elf || \
+  echo "rustup has no prebuilt rust-std yet; use -Zbuild-std=core,alloc"
 ```
 
-分步脚本：`fetch-rust.sh`（克隆 pinned tag，见 `rust-version.txt`）、`apply-target.sh`（注入目标）、
-`build.sh`（`x.py build`）、`link.sh`（`rustup toolchain link`）、`package.sh`（打包 sysroot tar）。
-
-bootstrap 配置见 `config.toml`：`download-ci-llvm = true`（用预编译 LLVM，免 cmake/ninja）、
-`target = [host, riscv32imfc]`、`extended + cargo`、`channel = stable`。
-
-## CI / 发布（多平台）
-
-`.github/workflows/build.yml`：`workflow_dispatch` 或推 `v*` tag 触发,**矩阵**在每个 host 上
-fetch → 注入 → 构建 → 冒烟测试（确认目标是 builtin）→ 打包 sysroot；`release` job 汇总所有
-平台产物,在 tag 时(或 dispatch 带 `tag` 输入)一并发为一个 GitHub Release。
-
-| Runner | host triple | 产物 |
-|--------|-------------|------|
-| ubuntu-latest | x86_64-unknown-linux-gnu | `hisi-riscv-rust-<ver>-x86_64-unknown-linux-gnu.tar.gz` |
-| ubuntu-24.04-arm | aarch64-unknown-linux-gnu | `…-aarch64-unknown-linux-gnu.tar.gz` |
-| macos-14 | aarch64-apple-darwin | `…-aarch64-apple-darwin.tar.gz` |
-| windows-latest | x86_64-pc-windows-msvc | `…-x86_64-pc-windows-msvc.tar.gz`(best-effort) |
-
-> Windows 用 git-bash 跑同一套 bash 脚本 + MSVC 构建,标 `experimental`(失败不阻塞 release)。
-> 产物前缀 `hisi-riscv-rust`、rustup 通道 `hisi-riscv`(均已芯片中立,弃用旧的 `ws63`)。
-
-下游使用预编译产物（按 host 选 tarball；通道名 `hisi-riscv`）：
+To test the ecosystem canary locally:
 
 ```bash
-curl -LO <release-asset-url>/hisi-riscv-rust-1.96.0-<your-host>.tar.gz
-tar xzf hisi-riscv-rust-1.96.0-*.tar.gz
-rustup toolchain link hisi-riscv "$PWD/stage2"
+git clone --recurse-submodules https://github.com/hispark-rs/hisi-riscv-rs
+cd hisi-riscv-rs
+rustup toolchain install nightly --profile minimal --component rust-src --component clippy --component rustfmt
+cargo +nightly build -Zbuild-std=core,alloc -p blinky --release
+cargo +nightly check -Zbuild-std=core,alloc -p hisi-riscv-rt --target riscv32imfc-unknown-none-elf
 ```
 
-## 在 hisi-riscv-rs 中启用（ROADMAP 阶段 3）
+## CI
 
-切到硬浮点时，在 hisi-riscv-rs：`rust-toolchain.toml` 用 `hisi-riscv` 工具链、`.cargo/config.toml`
-`target = "riscv32imfc-unknown-none-elf"`（builtin，无需 build-std）、`portable-atomic`
-保持 `critical-section` feature。详见 hisi-riscv-rs 的 `ROADMAP.md` 阶段 3 与
-`docs/architecture/overview.md`。
+`.github/workflows/build.yml` is now an upstream radar workflow. It runs on a
+schedule and manually, installs latest nightly, checks the target list and rustup
+component state, then builds a small hisi-riscv-rs canary.
 
-## 版本
+The old custom toolchain scripts under `scripts/`, `targets/`, `config.toml`, and
+`rust-version.txt` remain only as legacy reference material for old releases. Do
+not use them for new ecosystem setup.
 
-`rust-version.txt` pin 了 rust 源码 tag（当前 `1.96.0`，最新 stable）。升级时改它并重新校验目标定义
-对该版本的 `rustc_target` API（字段名偶尔变动）。
+## Tier-2 readiness signal
+
+The radar is intentionally boring and repeatable. A future Tier-2 push needs
+evidence that the target is not just present once, but remains usable across
+nightlies and downstream firmware builds:
+
+1. target present in latest nightly;
+2. build-std canary green;
+3. rustup std component status tracked;
+4. QEMU/HIL canaries available for runtime sanity;
+5. downstream template and core crates build without private toolchain patches.
